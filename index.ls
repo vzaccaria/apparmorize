@@ -16,11 +16,9 @@ get-option = (a, b, def, o) ->
 o = docopt(doc)
 
 
-filename      = get-option('-f' , '--file'     , '/dev/stdin'  , o)
-output        = get-option('-o' , '--output'   , '/dev/stdout' , o)
+profile-name = get-option('-p' , '--profile'     , 'standard'  , o)
+file-name = o['PROGRAM']
 
-filename = o["<input>"]
-filename ?= '/dev/stdin'
 
 
 

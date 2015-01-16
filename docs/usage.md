@@ -1,6 +1,9 @@
 Usage:
-    apparmorize [-f FILE]
+    apparmorize PROGRAM [ -i ] [ -p PROF ]
     apparmorize -h | --help 
 
 Options:
-    -f, --file FILE     If no <input> is passed, it is read from stdin
+    -i, --install           Install profiles, requires sudo.
+    -p, --profile PROF      Use a different profile (default standard)
+
+
