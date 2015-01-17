@@ -9,8 +9,13 @@
   "author": "Vittorio Zaccaria",
   "license": "BSD",
   "dependencies": {
+    "bluebird": "^2.7.1",
+    "diff-files": "^0.1.0",
     "docopt": "~0.4.1",
+    "liquid-node": "^2.4.0",
+    "moment": "^2.9.0",
     "node-cookiecutter": "^0.1.0",
-    "shelljs": "*"
+    "shelljs": "*",
+    "underscore.string": "^3.0.0"
   }
 }

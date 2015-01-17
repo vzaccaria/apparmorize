@@ -1,0 +1,8 @@
+# Last Modified: January 17, 2015 - 12:01
+
+#include <tunables/global>
+
+/Users/zaccaria/development/github/apparmorize/test-dir/mytest {
+    #include <abstractions/base>
+    /Users/zaccaria/development/github/apparmorize/test-dir/mytest mr,
+}

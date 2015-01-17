@@ -1,8 +1,0 @@
-# Last Modified: {{cookiecutter.date}}
-
-#include <tunables/global>
-
-{{cookiecutter.programName}} {
-    #include <abstractions/base>
-    {{cookiecutter.programName}} mr,
-}

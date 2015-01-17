@@ -1,0 +1,8 @@
+# Last Modified: {{profile.date}}
+
+#include <tunables/global>
+
+{{profile.programName}} {
+    #include <abstractions/base>
+    {{profile.programName}} mr,
+}
