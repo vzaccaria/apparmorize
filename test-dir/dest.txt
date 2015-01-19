@@ -1,7 +1,0 @@
-.
-├── Users.zaccaria.development.github.apparmorize.test-dir.mytest
-├── dest.txt
-├── ref.txt
-└── test.sh
-
-0 directories, 4 files
