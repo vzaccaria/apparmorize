@@ -1,6 +1,7 @@
 
 all: 
 	make index.js
+	make test
 
 index.js: index.ls
 	echo '#!/usr/bin/env node' > $@
@@ -12,4 +13,4 @@ clean:
 
 .phony: test
 test: makefile 
-	cd ./test-dir && ./test.sh
+	./index.js install -n 4

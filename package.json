@@ -10,9 +10,12 @@
   "license": "BSD",
   "dependencies": {
     "bluebird": "^2.7.1",
+    "debug": "^2.1.1",
     "diff-files": "^0.1.0",
     "docopt": "~0.4.1",
     "liquid-node": "^2.4.0",
+    "lockfile": "^1.0.0",
+    "lodash": "^2.4.1",
     "moment": "^2.9.0",
     "node-cookiecutter": "^0.1.0",
     "shelljs": "*",
