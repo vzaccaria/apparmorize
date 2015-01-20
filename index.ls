@@ -93,7 +93,7 @@ check-existing-profile = (template-name) ->
     return { template-name-a: template-name-a }
 
 copy = (name, from-dir, go) ->
-    complete-name = "#from-dir/#name"
+    complete-name = "#name"
     destination-name = "/etc/apparmor.d"
     if not go 
         console.log "Will copy #complete-name to #destination-name"

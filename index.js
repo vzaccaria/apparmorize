@@ -87,7 +87,7 @@
   };
   copy = function(name, fromDir, go){
     var completeName, destinationName;
-    completeName = fromDir + "/" + name;
+    completeName = name + "";
     destinationName = "/etc/apparmor.d";
     if (!go) {
       return console.log("Will copy " + completeName + " to " + destinationName);
