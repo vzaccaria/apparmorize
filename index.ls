@@ -24,7 +24,7 @@ get-command-options = ->
     get-option = (a, b, def, o) ->
         if not o[a] and not o[b]
             return def
-        else 
+        else
             return o[b]
 
     o = docopt(doc)
@@ -132,14 +132,14 @@ main = ->
     debug opts
     { install, run } = opts
 
-    if install 
+    if install
 
         { template-name } = opts
         { template-name-a} = check-existing-profile(template-name)
 
         liquid = initLiquid!
 
-        { number-of-instances, spool-dir, template-name } = opts 
+        { number-of-instances, spool-dir, template-name } = opts
         _.mkdir('-p', spool-dir)
 
         __.all([1 to number-of-instances].map (i) ->
@@ -151,17 +151,20 @@ main = ->
             dta.resources = [ { number: i, available: true } for i in [ 1 to number-of-instances] ]
             JSON.stringify(dta, 0, 4).to("#spool-dir/config.json")
         .then ->
-            restart-apparmor!
+            restart-apparmor(opts.go)
         .then ->
             console.log "done."
-    else 
-        { spool-dir, program } = opts  
+        .error ->
+            console.error "Sorry, cannot install: #it"
+
+    else
+        { spool-dir, program } = opts
         config = "#spool-dir/config.json"
         lockFile = "#spool-dir/lock"
         lock.lockAsync = __.promisify(lock.lock)
         lock.unlockAsync = __.promisify(lock.unlock)
         var n
-        try 
+        try
             lock.lockAsync(lockFile)
             .then ->
                 n := getNextAvailable(config)
