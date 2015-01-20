@@ -1,2 +1,4 @@
 spool
 index.js
+node_modules
+test-dir/*
