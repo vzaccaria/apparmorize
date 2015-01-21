@@ -14,6 +14,7 @@ fs = __.promisifyAll(fs)
 npm-dir = path.dirname(__filename)
 
 
+
 # Program
 
 get-command-options = ->
@@ -36,35 +37,36 @@ get-command-options = ->
     number-of-instances = parseInt(number-of-instances)
 
     install = o['install']? and o['install']
-    run = o['run']? and o['run']
+    run     = o['run']? and o['run']
+    remove  = o['remove']? and o['remove']
 
     program = o['PROGRAM']
 
-    return { 
-        install: install, 
-        run: run, 
-        go: go 
-        spool-dir: path.resolve(spool-dir), 
-        template-name, 
-        program: program,
-        number-of-instances: number-of-instances 
-        }
+    return { install, run, go, remove, spool-dir: path.resolve(spool-dir), template-name, program, number-of-instances }
 
 
 initLiquid = ->
     engine = require('liquid-node').Engine
     return new engine()
 
+
+getProfilesPrefix = (spool-dir) ->
+    absolute-filename   = path.resolve(spool-dir);
+    profile-name        = absolute-filename.replace('/','')
+    profile-name        = profile-name.replace(/\//g, '.')
+    return "/etc/apparmor.d/#profile-name"
+
+
 gen-profile = (liquid, command-name, spool-dir, template-name-a, go) ->
 
-    template-data = fs.readFileSync(template-name-a, 'utf-8')
+    template-data       = fs.readFileSync(template-name-a, 'utf-8')
 
-    spool-dir = path.resolve(spool-dir)
-    file-name = "#spool-dir/#command-name"
+    spool-dir           = path.resolve(spool-dir)
+    file-name           = "#spool-dir/#command-name"
 
-    absolute-filename = path.resolve(file-name);
-    profile-name = absolute-filename.replace('/','')
-    profile-name = profile-name.replace(/\//g, '.')
+    absolute-filename   = path.resolve(file-name);
+    profile-name        = absolute-filename.replace('/','')
+    profile-name        = profile-name.replace(/\//g, '.')
 
     object = {
             profile:
@@ -76,7 +78,7 @@ gen-profile = (liquid, command-name, spool-dir, template-name-a, go) ->
 
     return liquid.parseAndRender(template-data, object).then ->
         if not go
-            console.log "Will write profile to #spool-dir/#profile-name"
+            step "Will write profile to #spool-dir/#profile-name", "WRT"
             return "#spool-dir/#profile-name"
         else 
             debug("Writing profile to #spool-dir/#profile-name")
@@ -96,14 +98,14 @@ copy = (name, from-dir, go) ->
     complete-name = "#name"
     destination-name = "/etc/apparmor.d"
     if not go 
-        console.log "Will copy #complete-name to #destination-name"
+        step "#complete-name to #destination-name", "CPY"
     else 
         debug "Copying #complete-name to #destination-name"
         _.cp(complete-name, destination-name)
 
 restart-apparmor = (go) ->
     if not go 
-        console.log "Will restart apparmor"
+        step "Will restart apparmor", 'EXC'
     else 
         debug "Will restart apparmor"
         return __.promisify(_.exec)("service apparmor reload")
@@ -127,11 +129,55 @@ putBack = (config,n) ->
     debug "Restored resource" 
     debug data
 
+initConfig = (spool-dir, number-of-instances) ->
+    dta = {}
+    dta.resources = [ { number: i, available: true } for i in [ 1 to number-of-instances] ]
+    JSON.stringify(dta, 0, 4).to("#spool-dir/config.json")
+
+getNextLocked = (lockFile, config) ->
+    lock.lockAsync(lockFile)
+    .then ->
+         getNextAvailable(config)
+    .then (n) ->
+         lock.unlockAsync(lockFile)
+         return n
+
+step = (s, type='GEN') ->
+    console.log " * #type: #s "
+
+putBackLocked = (lockFile, config, n) ->
+    lock.lockAsync(lockFile, { retries: 3, retryWait: 100 })
+    .then ->
+        putBack(config, n)
+    .then ->
+        lock.unlockAsync(lockFile)
+
+removeProfiles = (opts) ->
+    { spool-dir, go } = opts
+    pref = getProfilesPrefix(spool-dir)
+    try
+        _.ls("#pref*").map ->
+            if not opts.go
+                step "I'd remove #it", "RMV"
+            else
+                _.rm("-f", it)
+
+        restart-apparmor(opts.go).error ->
+            console.error "PANIC! Cannot restart apparmor."
+    catch 
+        console.error "You cannot really do this.. check for permissions"
+        process.exit(1)
+
+
+
+
 main = ->
     opts = get-command-options!
     debug opts
-    { install, run } = opts
+    { install, run, remove, go } = opts
 
+    if not go and not run
+        console.log "\nThe following are the steps that will be done once you invoke this script with -g\n"
     if install
 
         { template-name } = opts
@@ -147,9 +193,7 @@ main = ->
             .then ->
                 copy(it, spool-dir, opts.go))
         .then ->
-            dta = {}
-            dta.resources = [ { number: i, available: true } for i in [ 1 to number-of-instances] ]
-            JSON.stringify(dta, 0, 4).to("#spool-dir/config.json")
+            initConfig(spool-dir, number-of-instances)
         .then ->
             restart-apparmor(opts.go)
         .then ->
@@ -158,35 +202,38 @@ main = ->
             console.error "Sorry, cannot install: #it"
 
     else
-        { spool-dir, program } = opts
-        config = "#spool-dir/config.json"
-        lockFile = "#spool-dir/lock"
-        lock.lockAsync = __.promisify(lock.lock)
-        lock.unlockAsync = __.promisify(lock.unlock)
-        var n
-        try
-            lock.lockAsync(lockFile)
-            .then ->
-                n := getNextAvailable(config)
-            .then ->
-                lock.unlockAsync(lockFile)
-            .then ->
-                if n == 0
-                    console.error "all slots are taken."
-                else 
-                    _.cp('-f', path.resolve(program), "#spool-dir/cmd-#n")
+        if run
+            { spool-dir, program } = opts
+            config = "#spool-dir/config.json"
+            lockFile = "#spool-dir/lock"
+            lock.lockAsync = __.promisify(lock.lock)
+            lock.unlockAsync = __.promisify(lock.unlock)
+            var n
+            try
+                getNextLocked(lockFile, config)
+                .then ->
+                    n := it
+                .then ->
+                    if n == 0
+                        console.error "all slots are taken."
+                        process.exit(1)
+                    else
+                        _.cp('-f', path.resolve(program), "#spool-dir/cmd-#n")
+                        __.promisify(_.exec)("#spool-dir/cmd-#n")
+                        .error ->
+                            console.error "Program tried to break out. Killed by apparmor"
 
-                    __.promisify(_.exec)("#spool-dir/cmd-#n")
+                        .finally ->
+                            putBackLocked(lockFile, config, n)
 
-                    .finally ->
-                        lock.lockAsync(lockFile, { retries: 3, retryWait: 100 })
-                        .then ->
-                            putBack(config, n)
-                        .then ->
-                            lock.unlockAsync(lockFile)
+            catch error
+                console.error "Sorry, #error"
+                process.exit(2)
+        else
+            if remove
+                removeProfiles(opts)
 
-        catch error 
-            console.error "Sorry, #error"
+
 
 main!
 
